@@ -5,6 +5,7 @@ import ai.koog.agents.core.tools.ToolRegistry
 import ai.koog.agents.core.tools.reflect.tool
 import ai.koog.prompt.executor.clients.anthropic.AnthropicModels
 import ai.koog.prompt.executor.llms.all.simpleAnthropicExecutor
+import theunderdog.ai.tools.listFiles
 import theunderdog.ai.tools.readFile
 
 suspend fun main() {
@@ -15,6 +16,7 @@ suspend fun main() {
     val model = AnthropicModels.Opus_4_5
     val toolRegistry = ToolRegistry {
         tool(::readFile)
+        tool(::listFiles)
     }
 
     val systemPrompt = "당신은 코딩 에이전트입니다."
