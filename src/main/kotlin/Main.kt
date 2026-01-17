@@ -28,10 +28,7 @@ suspend fun main() {
     // 사용자 입력 받기
     print("User: ")
     val userPrompt = readln()
-
-    // 프롬프트 구성
-    val prompt = prompt(id = "tool-routing") {
-        system("""
+    val systemPrompt = """
             당신은 코딩 에이전트입니다.
             
             사용 가능한 도구:
@@ -41,26 +38,55 @@ suspend fun main() {
             - [중요] 도구를 사용하려면 반드시 다음 JSON 형식으로 응답하세요:
             {"tool": "readFile", "args": {"path": "파일경로"}}
             - 도구가 필요하지 않은 일반 대화는 그냥 텍스트로 응답하세요.
-        """.trimIndent())
+        """.trimIndent()
+
+
+    // === 1차 LLM 호출 ===
+    val prompt = prompt(id = "first") {
+        system(systemPrompt)
         user(userPrompt)
     }
 
-    //LLM에 요청 보내고 응답 받기
-    val response = executor.execute(
+    println("\n=== 1차 LLM 호출 ===")
+    println("프롬프트: $userPrompt")
+
+    val firstResponse = executor.execute(
         prompt = prompt,
         model = AnthropicModels.Opus_4_5,
     )
-    val llmResponse = response.first().content
+    val llmResponse = firstResponse.first().content
+    println("LLM 응답: $llmResponse")
 
-    val json = Json {
-        ignoreUnknownKeys = true
-    }
+    val json = Json { ignoreUnknownKeys = true }
     val toolCall = json.decodeFromString<ToolCall>(llmResponse)
-
-    val result = when (toolCall.tool) {
+    val toolResult = when (toolCall.tool) {
         "readFile" -> readFile(toolCall.args.path)
         else -> "알 수 없는 Tool입니다: ${toolCall.tool}"
     }
 
-    println("툴 호출 결과: $result")
+    println("\n=== Tool 실행 ===")
+    println("Tool: ${toolCall.tool}")
+    println("결과: ${toolResult.take(100)}...")
+
+    println("\n=== Tool 실행 ===")
+    println("Tool: ${toolCall.tool}")
+    println("결과: ${toolResult.take(100)}...")
+
+    // === 2차 LLM 호출 - Tool 결과 포 함 ===
+    val secondPrompt = prompt("second") {
+        system(systemPrompt)
+        user(userPrompt)
+        assistant(llmResponse)
+        user(toolResult) // ← Tool 결과 가 여기 들어감!
+    }
+
+    println("\n=== 2차 LLM 호출 ===")
+    println("프롬프트에 추가 된 Tool 결과: ${toolResult.take(50)}...")
+
+    val finalResponse = executor.execute(
+        prompt = secondPrompt,
+        model = AnthropicModels.Sonnet_4,
+    )
+    println("\n=== 최종 응답 ===")
+    println(finalResponse.first().content)
 }
