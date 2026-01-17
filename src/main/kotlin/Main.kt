@@ -5,6 +5,7 @@ import ai.koog.agents.core.tools.ToolRegistry
 import ai.koog.agents.core.tools.reflect.tool
 import ai.koog.prompt.executor.clients.anthropic.AnthropicModels
 import ai.koog.prompt.executor.llms.all.simpleAnthropicExecutor
+import theunderdog.ai.tools.bash
 import theunderdog.ai.tools.editFile
 import theunderdog.ai.tools.listFiles
 import theunderdog.ai.tools.readFile
@@ -19,6 +20,7 @@ suspend fun main() {
         tool(::readFile)
         tool(::listFiles)
         tool(::editFile)
+        tool(::bash)
     }
 
     val systemPrompt = "당신은 코딩 에이전트입니다."
