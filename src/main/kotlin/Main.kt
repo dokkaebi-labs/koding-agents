@@ -24,10 +24,12 @@ suspend fun main() {
         ?: error("API KEY가 설정되지 않았습니다.")
 
     val executor = simpleAnthropicExecutor(apiKey)
+    val json = Json { ignoreUnknownKeys = true }
+    val model = AnthropicModels.Opus_4_5
+    var iterations = 0
+    val maxIterations = 10
 
-    // 사용자 입력 받기
-    print("User: ")
-    val userPrompt = readln()
+    val conversationHistory = mutableListOf<Pair<String, String>>()
     val systemPrompt = """
             당신은 코딩 에이전트입니다.
             
@@ -40,53 +42,44 @@ suspend fun main() {
             - 도구가 필요하지 않은 일반 대화는 그냥 텍스트로 응답하세요.
         """.trimIndent()
 
-
-    // === 1차 LLM 호출 ===
-    val prompt = prompt(id = "first") {
-        system(systemPrompt)
-        user(userPrompt)
+    fun parseToolCall(response: String): ToolCall? {
+        return try {
+            json.decodeFromString<ToolCall>(response)
+        } catch (e: Exception) {
+            null
+        }
     }
 
-    println("\n=== 1차 LLM 호출 ===")
-    println("프롬프트: $userPrompt")
+    // 사용자 입력 받기
+    print("User: ")
+    val userPrompt = readln()
 
-    val firstResponse = executor.execute(
-        prompt = prompt,
-        model = AnthropicModels.Opus_4_5,
-    )
-    val llmResponse = firstResponse.first().content
-    println("LLM 응답: $llmResponse")
 
-    val json = Json { ignoreUnknownKeys = true }
-    val toolCall = json.decodeFromString<ToolCall>(llmResponse)
-    val toolResult = when (toolCall.tool) {
-        "readFile" -> readFile(toolCall.args.path)
-        else -> "알 수 없는 Tool입니다: ${toolCall.tool}"
+    while (maxIterations > iterations) {
+        val currentPrompt = prompt("agent-loop") {
+            system(systemPrompt)
+            user(userPrompt)
+            conversationHistory.forEach { (assistantMsg, userMsg) ->
+                assistant(assistantMsg)
+                user(userMsg)
+            }
+        }
+
+        val response = executor.execute(currentPrompt, model)
+        val llmResponse = response.first().content
+
+        val toolCall = parseToolCall(llmResponse)
+        if (toolCall != null) {
+            val toolResult = when (toolCall.tool) {
+                "readFile" -> readFile(toolCall.args.path)
+                else -> "알 수 없는 Tool입니다: ${toolCall.tool}"
+            }
+            println("Tool 결과: ${toolResult.take(100)}...")
+            conversationHistory.add(llmResponse to toolResult)
+            iterations++
+        } else {
+            println("Assistant: $llmResponse")
+            break
+        }
     }
-
-    println("\n=== Tool 실행 ===")
-    println("Tool: ${toolCall.tool}")
-    println("결과: ${toolResult.take(100)}...")
-
-    println("\n=== Tool 실행 ===")
-    println("Tool: ${toolCall.tool}")
-    println("결과: ${toolResult.take(100)}...")
-
-    // === 2차 LLM 호출 - Tool 결과 포 함 ===
-    val secondPrompt = prompt("second") {
-        system(systemPrompt)
-        user(userPrompt)
-        assistant(llmResponse)
-        user(toolResult) // ← Tool 결과 가 여기 들어감!
-    }
-
-    println("\n=== 2차 LLM 호출 ===")
-    println("프롬프트에 추가 된 Tool 결과: ${toolResult.take(50)}...")
-
-    val finalResponse = executor.execute(
-        prompt = secondPrompt,
-        model = AnthropicModels.Sonnet_4,
-    )
-    println("\n=== 최종 응답 ===")
-    println(finalResponse.first().content)
 }
