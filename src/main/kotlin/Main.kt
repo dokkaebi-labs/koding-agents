@@ -1,10 +1,23 @@
 package theunderdog.ai
 
 import ai.koog.prompt.dsl.prompt
-import ai.koog.prompt.executor.clients.anthropic.AnthropicLLMClient
 import ai.koog.prompt.executor.clients.anthropic.AnthropicModels
-import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor
 import ai.koog.prompt.executor.llms.all.simpleAnthropicExecutor
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import theunderdog.ai.tools.readFile
+
+@Serializable
+data class ToolCall(
+    val tool: String,
+    val args: ToolArgs,
+)
+
+
+@Serializable
+data class ToolArgs(
+    val path: String,
+)
 
 suspend fun main() {
     val apiKey = System.getenv("ANTHROPIC_API_KEY")
@@ -17,7 +30,7 @@ suspend fun main() {
     val userPrompt = readln()
 
     // 프롬프트 구성
-    val prompt = prompt(id = "hello-koog") {
+    val prompt = prompt(id = "tool-routing") {
         system("""
             당신은 코딩 에이전트입니다.
             
@@ -37,7 +50,17 @@ suspend fun main() {
         prompt = prompt,
         model = AnthropicModels.Opus_4_5,
     )
+    val llmResponse = response.first().content
 
-    println("LLM 응답:")
-    println("Assistant: ${response.first().content}")
+    val json = Json {
+        ignoreUnknownKeys = true
+    }
+    val toolCall = json.decodeFromString<ToolCall>(llmResponse)
+
+    val result = when (toolCall.tool) {
+        "readFile" -> readFile(toolCall.args.path)
+        else -> "알 수 없는 Tool입니다: ${toolCall.tool}"
+    }
+
+    println("툴 호출 결과: $result")
 }
