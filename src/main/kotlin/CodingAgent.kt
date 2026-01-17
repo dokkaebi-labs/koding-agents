@@ -35,8 +35,11 @@ class CodingAgent(
         )
 
     suspend fun chat(userMessage: String): String {
+        conversationHistoryStorage.compressHistory(executor, model)
+
         val history = conversationHistoryStorage.getHistory()
-        val system = buildSystemPromptWithHistory(history)
+        val summary = conversationHistoryStorage.getSummary()
+        val system = buildSystemPromptWithHistory(history, summary)
 
         val agent = AIAgent(
             promptExecutor = executor,
@@ -55,24 +58,29 @@ class CodingAgent(
         return assistantMessage
     }
 
-    private fun buildSystemPromptWithHistory(history: List<Message>): String {
+    private fun buildSystemPromptWithHistory(
+        history: List<Message>,
+        summary: String?,
+    ): String {
         if (history.isEmpty()) {
             return systemPrompt
         }
         return buildString {
             appendLine("# System Prompt")
             appendLine(systemPrompt)
-            appendLine()
-            appendLine("# Conversation History")
-            history.forEach { message ->
-                when (message) {
-                    is Message.User -> appendLine("User: ${message.content}")
-                    is Message.Assistant -> appendLine("Assistant: ${message.content}")
-                    else -> {}
+            summary?.let { appendLine("\n# Previous Conversation Summary\n$it") }
+            if (history.isNotEmpty()) {
+                appendLine("# Conversation History")
+                history.forEach { message ->
+                    when (message) {
+                        is Message.User -> appendLine("User: ${message.content}")
+                        is Message.Assistant -> appendLine("Assistant: ${message.content}")
+                        else -> {}
+                    }
                 }
+                appendLine()
+                appendLine("위의 맥락을 바탕으로 대화를 이어가주세요.")
             }
-            appendLine()
-            appendLine("위의 맥락을 바탕으로 대화를 이어가주세요.")
         }
     }
 }
