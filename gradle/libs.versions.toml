@@ -1,0 +1,48 @@
+[versions]
+# Koog AI Framework
+koog = "0.6.0"
+
+# Kotlin
+kotlin = "2.3.0"
+
+# Kotlinx
+kotlinx-coroutines = "1.10.2"
+kotlinx-serialization = "1.9.0"
+kotlinx-cli = "0.3.6"
+
+# JLine3 (Interactive terminal)
+jline = "3.27.1"
+
+# Logging
+kotlin-logging = "5.1.0"
+logback = "1.5.13"
+
+# Testing
+mockk = "1.13.8"
+
+[plugins]
+kotlin-jvm = { id="org.jetbrains.kotlin.jvm", version.ref = "kotlin"}
+kotlin-serialization = { id= "org.jetbrains.kotlin.plugin.serialization", version.ref="kotlin"}
+
+[libraries]
+# Koog
+koog-agents = { module = "ai.koog:koog-agents", version.ref = "koog" }
+koog-tools = { module = "ai.koog:agents-tools-jvm", version.ref = "koog" }
+koog-anthropic = { module = "ai.koog:prompt-executor-anthropic-client-jvm", version.ref = "koog" }
+
+# Kotlinx
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+kotlinx-cli = { module = "org.jetbrains.kotlinx:kotlinx-cli", version.ref = "kotlinx-cli" }
+
+# JLine3
+jline = { module = "org.jline:jline", version.ref = "jline" }
+
+# Logging
+kotlin-logging = { module = "io.github.oshai:kotlin-logging-jvm", version.ref = "kotlin-logging" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+
+# Testing
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
