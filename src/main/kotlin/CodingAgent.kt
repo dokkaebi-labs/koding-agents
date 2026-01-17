@@ -79,7 +79,7 @@ class CodingAgent(
         summary: String?,
         memory: String?,
     ): String {
-        if (history.isEmpty()) {
+        if (summary == null && history.isEmpty() && memory == null) {
             return systemPrompt
         }
         return buildString {
