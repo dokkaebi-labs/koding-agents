@@ -10,16 +10,22 @@ import ai.koog.rag.base.files.writeText
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Clock.System.now
 import kotlinx.serialization.json.Json
+import java.nio.file.Path
 
 class JsonlConversationHistoryStorage(
     private val fs: JVMFileSystemProvider.ReadWrite,
-    private val sessionDir: java.nio.file.Path,
+    private val sessionDir: Path,
     private val json: Json = Json {
         ignoreUnknownKeys = true
         prettyPrint = false
     },
 ): ConversationHistoryStorage {
-    private val historyFile: java.nio.file.Path
+
+    companion object {
+        private const val MAX_MESSAGES = 20 // Sliding Window 크기
+    }
+
+    private val historyFile: Path
         get() = fs.joinPath(sessionDir, "session.jsonl")
 
     init {
@@ -67,7 +73,7 @@ class JsonlConversationHistoryStorage(
         }
 
         val content = fs.readText(historyFile)
-        return content.lines()
+        val allMessages = content.lines()
             .filter { it.isNotBlank() }
             .mapNotNull { line ->
                 try {
@@ -78,5 +84,6 @@ class JsonlConversationHistoryStorage(
                     null
                 }
             }
+        return allMessages.takeLast(MAX_MESSAGES)
     }
 }
